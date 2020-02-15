@@ -1,0 +1,101 @@
+<script src="https://cdn.jsdelivr.net/npm/p5@0.10.2/lib/p5.js"></script>
+<script>
+
+  const BG_CLR = '#88aaff'
+  const SC_WIDTH = 500
+  const SC_HEIGHT = 500
+  const VEL_LIMIT = 2
+  const GRAVITY_MOD = 50
+
+  // initial constants
+  const INIT_X = 10
+  const INIT_Y = 100
+  const RADIUS = 7
+
+  const Vec = Object.freeze({
+      make: (x, y) => Object.freeze({x, y}),
+
+      add: ({x: x1, y: y1}, {x: x2, y: y2}) => Vec.make(x1 + x2, y1 + y2),
+
+      zero: () => Vec.make(0, 0),
+
+      toString: ({x, y}) => `Vec(${x}, ${y})`,
+
+      fromTo: (from, to) => Vec.minus(to, from),
+
+      minus: ({x: x1, y: y1}, {x: x2, y:y2}) => Vec.make(x1 - x2, y1 - y2),
+
+      scale: (amt, {x, y}) => Vec.make(x * amt, y * amt),
+
+      magnitude: ({x, y}) => Math.sqrt(x * x + y * y),
+
+      normalize:  v => Vec.scale(1 / Vec.magnitude(v), v),
+
+      limit: (max, {x, y}) =>
+	  Vec.make(
+	      Math.abs(x) > max ? Math.sign(x) * max : x,
+	      Math.abs(y) > max ? Math.sign(y) * max : y
+	  )
+  })
+
+  const Particle = Object.freeze({
+      make: (pos, radius, vel, accel) =>
+	  Object.freeze({pos, radius, vel, accel}),
+
+      draw: ({pos, radius}) => ellipse(pos.x, pos.y, radius*2),
+
+      update: ({pos, radius, vel, accel}, target, strength) =>{
+	  const forceVec = Vec.fromTo(pos, target)
+	  const mag = Vec.magnitude(forceVec)
+	  return Particle.make(
+	      Vec.add(pos, vel),
+	      radius,
+	      Vec.limit(VEL_LIMIT, Vec.add(vel, accel)),
+	      Vec.scale( // TODO: refactor this using a pipe operator and currying
+		  strength,
+		  Vec.scale(
+		      1 / (mag * mag),
+		      Vec.scale(
+			  1 / mag,
+			  forceVec
+		      )
+		  )
+	      )
+	  )
+      },
+
+      toString: ({pos, radius, vel, accel}) =>
+	  `Particle(pos: ${Vec.toString(pos)}, ` +
+	  `vel: ${Vec.toString(vel)}, ` +
+	  `accel: ${Vec.toString(accel)}, ` +
+	  `radius: ${radius})`,
+  })
+
+  let myParticle
+
+  function setup(){
+      createCanvas(SC_WIDTH, SC_HEIGHT)
+      background(BG_CLR)
+      myParticle = Particle.make(
+	  Vec.make(INIT_X, INIT_Y),
+	  RADIUS,
+	  Vec.zero(),
+	  Vec.zero()
+      )
+  }
+
+  function draw(){
+      // update phase
+      myParticle = Particle.update(
+	  myParticle,
+	  Vec.make(mouseX, mouseY),
+	  GRAVITY_MOD
+      )
+
+      // draw phase
+      background(BG_CLR)
+      Particle.draw(myParticle)
+  }
+
+
+</script>
